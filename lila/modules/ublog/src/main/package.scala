@@ -1,0 +1,20 @@
+package lila.ublog
+
+export lila.core.lilaism.Lilaism.{ *, given }
+export lila.common.extensions.*
+
+val monthOfFirstPost = java.time.YearMonth.of(2021, 9)
+
+val markdownOptions = lila.memo.MarkdownOptions(
+  autoLink = true,
+  list = true,
+  table = true,
+  header = true,
+  headerAnchorLink = true,
+  strikeThrough = true,
+  blockQuote = true,
+  code = true,
+  timestamp = false,
+  maxPgns = lila.memo.Max(50),
+  toastUi = true
+)

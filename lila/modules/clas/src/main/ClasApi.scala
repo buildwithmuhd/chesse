@@ -1,0 +1,444 @@
+package lila.clas
+
+import reactivemongo.api.*
+import scalalib.data.LazyFu
+
+import lila.common.Markdown
+import lila.core.id.{ ClasId, ClasInviteId, StudentId }
+import lila.db.dsl.{ *, given }
+import lila.rating.{ Perf, PerfType, UserPerfs }
+import lila.core.user.RealName
+import lila.common.Bus
+import lila.core.perm.Granter
+import cats.data.OptionT
+
+final class ClasApi(
+    colls: ClasColls,
+    filters: ClasUserFilters,
+    matesCache: ClasMates,
+    userRepo: lila.user.UserRepo,
+    perfsRepo: lila.user.UserPerfsRepo,
+    clasMsg: ClasMsg,
+    authenticator: lila.core.security.Authenticator
+)(using Executor):
+
+  import BsonHandlers.given
+  import colls.selectArchived
+  export filters.{ student as isStudent, teacher as isTeacher }
+
+  Bus.sub[lila.core.user.UserDelete]: del =>
+    colls.clas.update.one(bdoc("created.by" -> del.id), set("created.by" -> UserId.ghost), multi = true)
+    colls.clas.update.one(bdoc("teachers" -> del.id), pull("teachers" -> del.id), multi = true)
+    colls.student.delete.one(bdoc("userId" -> del.id))
+
+  object clas:
+
+    val coll = colls.clas
+
+    def byId(id: ClasId) = coll.byId[Clas](id.value)
+
+    def of(teacher: User): Fu[List[Clas]] =
+      coll
+        .find(bdoc("teachers" -> teacher.id))
+        .sort(bdoc("archived" -> 1, "viewedAt" -> -1))
+        .cursor[Clas]()
+        .list(100)
+
+    def countOf(teacher: User): Fu[Int] =
+      coll.countSel(bdoc("teachers" -> teacher.id))
+
+    private def activeByIds(clasIds: List[ClasId], nb: Int): Fu[List[Clas]] =
+      coll
+        .find(inIds(clasIds) ++ selectArchived(false))
+        .sort(sort.desc("createdAt"))
+        .cursor[Clas]()
+        .list(nb)
+
+    def ofStudent(userId: UserId, nb: Int): Fu[List[Clas]] =
+      colls.clasIdsOfStudent(userId).flatMap(activeByIds(_, nb))
+
+    def create(data: ClasForm.ClasData)(using teacher: Me): Fu[Clas] =
+      val clas = data.make(teacher)
+      for
+        _ <- coll.insert.one(clas)
+        _ = filters.teacher.add(teacher.userId)
+        _ = teamSync(clas)
+      yield clas
+
+    def update(from: Clas, data: ClasForm.ClasData)(using Me): Fu[Clas] =
+      val clas = data.update(from)
+      for
+        enabledTeachers <- userRepo.filterEnabled(clas.teachers.toList)
+        fixedTeachers = clas.teachers.toList.filter(enabledTeachers.contains).toNel | from.teachers
+        checked = clas.copy(teachers = fixedTeachers)
+        _ <- coll.update.one(bid(clas.id), checked)
+        _ = fixedTeachers.toList.foreach(filters.teacher.add)
+        _ = teamSync(checked)
+      yield checked
+
+    def updateWall(clas: Clas, text: Markdown): Funit =
+      coll.updateField(bid(clas.id), "wall", text).void
+
+    def getAndView(id: ClasId)(using teacher: Me): Fu[Option[Clas]] =
+      coll
+        .findAndUpdateSimplified[Clas](
+          selector = bid(id) ++ bdoc("teachers" -> teacher.userId),
+          update = bset("viewedAt" -> nowInstant),
+          fetchNewObject = true
+        )
+
+    def teachers(clas: Clas): Fu[List[User]] =
+      userRepo.byOrderedIds(clas.teachers.toList, readPref = _.sec)
+
+    def isTeacherIn(teacher: User, clasId: ClasId): Fu[Boolean] =
+      Granter
+        .of(_.Teacher)(teacher)
+        .so:
+          coll.exists(bid(clasId) ++ bdoc("teachers" -> teacher.id))
+
+    private def lookupClasOfTeacher(teacher: UserId) =
+      lookup.simple(
+        from = colls.clas,
+        as = "clasId",
+        local = "clasId",
+        foreign = "_id",
+        pipe = List(
+          bdoc("$match" -> bdoc("teachers" -> teacher)),
+          bdoc("$limit" -> 1),
+          bdoc("$project" -> bid(true))
+        )
+      )
+
+    def isTeacherOf(teacher: UserId, student: UserId): Fu[Boolean] =
+      (isTeacher(teacher) && isStudent(student)).so:
+        colls.student.aggregateExists(_.sec): framework =>
+          import framework.*
+          Match(bdoc("userId" -> student)) -> List(
+            Project(bdoc("clasId" -> true)),
+            PipelineOperator(lookupClasOfTeacher(teacher)),
+            Match("clasId".neq(barr())),
+            Limit(1),
+            Project(bid(true))
+          )
+
+    def myPotentialStudentNames(userIds: Iterable[UserId])(using me: Me): Fu[Map[UserId, Student.RealName]] =
+      filters
+        .teacher(me.userId)
+        .so:
+          val potentialStudents = userIds.filter(isStudent.apply)
+          potentialStudents.nonEmpty.so:
+            colls.student
+              .aggregateList(128, _.sec): framework =>
+                import framework.*
+                Match("userId".in(potentialStudents)) -> List(
+                  Project(bdoc("userId" -> true, "clasId" -> true, "realName" -> true)),
+                  PipelineOperator(lookupClasOfTeacher(me.userId)),
+                  Match("clasId".neq(barr())),
+                  GroupField("userId")("realName" -> LastField("realName"))
+                )
+              .map:
+                _.flatMap: doc =>
+                  for
+                    userId <- doc.getAsOpt[UserId]("_id")
+                    realName <- doc.getAsOpt[Student.RealName]("realName")
+                  yield userId -> realName
+              .map(_.toMap)
+
+    /* Only if userId and I have a class in common,
+     * wether we're teachers or students */
+    def realName(userId: UserId)(using me: Me): Fu[Option[RealName]] =
+      if me.is(userId) then fuccess(none)
+      else
+        isTeacherOf(userId, me.userId).flatMap:
+          if _ then userRepo.realName(userId)
+          else
+            isStudent(userId)
+              .so:
+                if isTeacher(me.userId)
+                then myPotentialStudentNames(List(userId)).map(_.get(userId))
+                else
+                  isStudent(me.userId).so:
+                    matesCache.findMateStudent(userId).map2(_.realName)
+              .map2(_.into(RealName))
+
+    def canKidsUseMessages(kid1: UserId, kid2: UserId): Fu[Boolean] =
+      fuccess(isStudent(kid1) && isStudent(kid2)) >>&
+        colls.student.aggregateExists(_.sec): framework =>
+          import framework.*
+          Match(bdoc("userId".in(List(kid1.id, kid2.id)))) -> List(
+            PipelineOperator(
+              lookup.simple(
+                from = colls.clas,
+                as = "clas",
+                local = "clasId",
+                foreign = "_id",
+                pipe = List(
+                  bdoc("$match" -> bdoc("canMsg" -> true)),
+                  bdoc("$project" -> bid(true))
+                )
+              )
+            ),
+            Unwind("clas"),
+            GroupField("clas._id")("nb" -> SumAll),
+            Match(bdoc("nb" -> 2)),
+            Limit(1)
+          )
+
+    def archive(from: Clas, v: Boolean)(using me: Me): Funit =
+      for clas <- doArchiveOnly(from, v)
+      yield teamSync(clas)
+
+    private def doArchiveOnly(from: Clas, v: Boolean)(using me: MyId): Fu[Clas] =
+      val clas = from.copy(archived = v.option(Clas.Recorded(me.userId, nowInstant)))
+      for _ <- coll.updateOrUnsetField(bid(clas.id), "archived", clas.archived)
+      yield clas
+
+    def archiveAllInactive: Funit =
+      for
+        inactiveClasses <- coll
+          .find(selectArchived(false) ++ "viewedAt".lte(nowInstant.minusDays(100)))
+          .cursor[Clas](ReadPref.sec)
+          .list(100)
+        _ = inactiveClasses.nonEmptyOption.foreach: classes =>
+          lila.log.system.info:
+            s"Archiving ${classes.size} inactive classes: ${classes.map(_.id).mkString(", ")}"
+        _ <- inactiveClasses.sequentiallyVoid: from =>
+          for
+            clas <- doArchiveOnly(from, true)(using UserId.lichessAsMe)
+            _ <- clasMsg.onArchive(clas)
+          yield teamSync(clas)(using None)
+      yield ()
+
+  object student:
+
+    import lila.core.security.ClearPassword
+
+    export colls.countStudents as count
+
+    private def coll = colls.student
+
+    def activeOf(clas: Clas): Fu[List[Student]] =
+      of(bdoc("clasId" -> clas.id) ++ selectArchived(false))
+
+    def activeUserIdsOf(clas: ClasId): Fu[List[UserId]] =
+      coll.primitive[UserId](bdoc("clasId" -> clas) ++ selectArchived(false), sort.asc("userId"), "userId")
+
+    def allWithUsers(clas: Clas, selector: Bdoc = emptyBdoc): Fu[List[Student.WithUser]] =
+      colls.student
+        .aggregateList(Int.MaxValue, _.sec): framework =>
+          import framework.*
+          Match(bdoc("clasId" -> clas.id) ++ selector) -> List(
+            PipelineOperator(
+              lookup.simple(
+                from = userRepo.coll,
+                as = "user",
+                local = "userId",
+                foreign = "_id"
+              )
+            ),
+            UnwindField("user")
+          )
+        .map: docs =>
+          import lila.user.BSONHandlers.userHandler
+          for
+            doc <- docs
+            student <- doc.asOpt[Student]
+            user <- doc.getAsOpt[User]("user")
+          yield Student.WithUser(student, user)
+
+    def activeWithUsers(clas: Clas): Fu[List[Student.WithUser]] =
+      allWithUsers(clas, selectArchived(false))
+
+    def withPerfs(student: Student.WithUser): Fu[Student.WithUserPerfs] =
+      perfsRepo.perfsOf(student.user).map(student.withPerfs)
+
+    def withPerfs(students: List[Student.WithUser]): Fu[List[Student.WithUserPerfs]] =
+      perfsRepo.idsMap(students.map(_.user.id), _.sec).map { perfs =>
+        students.map(s => s.withPerfs(perfs.getOrElse(s.user.id, UserPerfs.default(s.user.id))))
+      }
+
+    def withPerf(students: List[Student.WithUser], perfType: PerfType): Fu[List[Student.WithUserPerf]] =
+      perfsRepo.idsMap(students.map(_.user.id), perfType, _.sec).map { perfs =>
+        students.map: s =>
+          Student.WithUserPerf(s.student, s.user, perfs.getOrElse(s.user.id, Perf.default))
+      }
+
+    private def of(selector: Bdoc): Fu[List[Student]] =
+      coll
+        .find(selector)
+        .sort(sort.asc("userId"))
+        .cursor[Student]()
+        .list(500)
+
+    def isManaged(user: User): Fu[Boolean] =
+      coll.exists(bdoc("userId" -> user.id, "managed" -> true))
+
+    def release(user: User): Funit =
+      coll.updateField(bdoc("userId" -> user.id, "managed" -> true), "managed", false).void
+
+    def findManaged(user: User): Fu[Option[Student.ManagedInfo]] =
+      for
+        student <- OptionT(coll.find(bdoc("userId" -> user.id, "managed" -> true)).one[Student])
+        createdBy <- OptionT(userRepo.byId(student.created.by))
+        clas <- OptionT(clas.byId(student.clasId))
+      yield Student.ManagedInfo(createdBy, clas)
+    .value
+
+    def get(clas: Clas, userId: UserId): Fu[Option[Student]] =
+      coll.one[Student](bid(Student.makeId(userId, clas.id)))
+
+    def get(clas: Clas, user: User): Fu[Option[Student.WithUser]] =
+      get(clas, user.id).map2 { Student.WithUser(_, user) }
+
+    def withManagingClas(s: Student.WithUserPerfs, clas: Clas): Fu[Student.WithUserAndManagingClas] = {
+      if s.student.managed then fuccess(clas.some)
+      else
+        colls.student
+          .aggregateOne(_.sec): framework =>
+            import framework.*
+            Match(bdoc("userId" -> s.user.id, "managed" -> true)) -> List(
+              PipelineOperator(
+                lookup.simple(
+                  from = colls.clas,
+                  as = "clas",
+                  local = "clasId",
+                  foreign = "_id"
+                )
+              ),
+              UnwindField("clas")
+            )
+          .map:
+            _.flatMap(_.getAsOpt[Clas]("clas"))
+    }.map { Student.WithUserAndManagingClas(s, _) }
+
+    def update(from: Student, data: ClasForm.StudentData): Fu[Student] =
+      val student = data.update(from)
+      coll.update.one(bid(student.id), student).inject(student)
+
+    def move(fromClas: Clas, s: Student.WithUser, toClas: Clas)(using teacher: Me): Fu[Option[Student]] = for
+      _ <- deleteStudent(fromClas, s)
+      stu = s.student.copy(
+        id = Student.makeId(s.user.id, toClas.id),
+        clasId = toClas.id,
+        created = Clas.Recorded(by = teacher.userId, at = nowInstant)
+      )
+      moved <- colls.student.insert
+        .one(stu)
+        .inject(stu.some)
+        .recoverWith(lila.db.recoverDuplicateKey { _ =>
+          student.get(toClas, s.user.id)
+        })
+      _ = teamSync(toClas)
+    yield moved
+
+    def resetPassword(s: Student)(using me: Me): Fu[ClearPassword] =
+      lila.log.system.info:
+        s"Reset password for student ${s.userId} in class ${s.clasId} by teacher ${me.username}"
+      val password = Student.password.generate()
+      authenticator.setPassword(s.userId, password).inject(password)
+
+    def archive(clas: Clas, sId: StudentId, v: Boolean)(using me: Me): Fu[Option[Student]] =
+      for
+        student <- coll
+          .findAndUpdateSimplified[Student](
+            selector = bid(sId),
+            update =
+              if v then bset("archived" -> Clas.Recorded(me, nowInstant))
+              else unset("archived"),
+            fetchNewObject = true
+          )
+        _ = teamSync(clas)
+      yield student
+
+    def archiveMany(clas: Clas, studentIds: List[StudentId], v: Boolean)(using me: Me): Funit =
+      val archived = v.option(Clas.Recorded(me.userId, nowInstant))
+      for _ <- coll.updateOrUnsetField(inIds(studentIds), "archived", archived, multi = true)
+      yield teamSync(clas)
+
+    def deleteStudent(clas: Clas, s: Student.WithUser)(using Me): Funit =
+      for _ <- coll.delete.one(bid(s.student.id))
+      yield teamSync(clas)
+
+  end student
+
+  object invite:
+
+    import ClasInvite.Feedback.*
+
+    def create(clas: Clas, user: User, realName: Student.RealName)(using
+        teacher: Me
+    ): Fu[ClasInvite.Feedback] =
+      student
+        .archive(clas, Student.makeId(user.id, clas.id), v = false)
+        .map2[ClasInvite.Feedback](_ => Already)
+        .getOrElse:
+          lila.mon.clas.student.invite(teacher.userId).increment()
+          val invite = ClasInvite.make(clas, user, realName)
+          colls.invite.insert
+            .one(invite)
+            .void
+            .flatMap: _ =>
+              clasMsg.invitation(teacher, user, clas, invite)
+            .recover:
+              lila.db.recoverDuplicateKey(_ => Found)
+
+    def get(id: ClasInviteId) = colls.invite.one[ClasInvite](bid(id))
+
+    def view(id: ClasInviteId, user: User): Fu[Option[(ClasInvite, Clas)]] =
+      colls.invite.one[ClasInvite](bid(id) ++ bdoc("userId" -> user.id)).flatMapz { invite =>
+        colls.clas.byId[Clas](invite.clasId.value).map2 { invite -> _ }
+      }
+
+    def accept(id: ClasInviteId, user: User): Fu[Option[Student]] =
+      colls.invite.one[ClasInvite](bid(id) ++ bdoc("userId" -> user.id)).flatMapz { invite =>
+        colls.clas.one[Clas](bid(invite.clasId)).flatMapz { clas =>
+          val stu = Student.make(user, clas, invite.created.by, invite.realName, managed = false)
+          val done = for
+            _ <- colls.student.insert.one(stu)
+            _ <- colls.invite.updateField(bid(id), "accepted", true)
+            _ <- clasMsg.welcomeMessage(invite.created.by, user, clas)
+            _ = filters.student.add(user.id)
+            _ = teamSync(clas)(using none)
+          yield stu.some
+          done.recoverWith(lila.db.recoverDuplicateKey { _ =>
+            student.get(clas, user.id)
+          })
+        }
+      }
+
+    def decline(id: ClasInviteId): Fu[Option[ClasInvite]] =
+      colls.invite
+        .findAndUpdateSimplified[ClasInvite](
+          selector = bid(id),
+          update = bset("accepted" -> false)
+        )
+
+    def listPending(clas: Clas): Fu[List[ClasInvite]] =
+      colls.invite
+        .find(bdoc("clasId" -> clas.id, "accepted".neq(true)))
+        .sort(sort.desc("created.at"))
+        .cursor[ClasInvite]()
+        .list(100)
+
+    def delete(id: ClasInviteId): Funit =
+      colls.invite.delete.one(bid(id)).void
+
+    def deleteInvites(id: ClasId, userIds: List[UserId]): Funit =
+      userIds.nonEmpty.so:
+        colls.invite.delete
+          .one(
+            bdoc(
+              "userId".in(userIds),
+              "clasId" -> id
+            )
+          )
+          .void
+
+  end invite
+
+  private[clas] def teamSync(clas: Clas)(using Option[Me]): Unit =
+    import lila.core.misc.clas.*
+    val config = (~clas.hasTeam && clas.isActive).option:
+      val students = LazyFu(() => student.activeUserIdsOf(clas.id))
+      ClasTeamConfig(clas.name, clas.teachers, students)
+    Bus.pub(ClasTeamUpdate(clas.id, config))

@@ -1,0 +1,109 @@
+@import 'list-widget';
+@import 'topics';
+
+$top-height: 3.2rem;
+
+.study-index {
+  .box__top {
+    @extend %flex-wrap;
+
+    align-items: start;
+
+    h1 {
+      flex: 3 1 auto;
+      margin: 0 0 1rem 0;
+    }
+
+    .search {
+      flex: 3 1 auto;
+      display: flex;
+
+      input {
+        @extend %box-radius-inline-start;
+
+        flex: 1 1 100%;
+        height: $top-height;
+        font-size: 1.1em;
+
+        &::placeholder {
+          color: $c-font-dimmer;
+        }
+
+        @media (min-width: at-least($xx-small)) {
+          font-size: 1.2em;
+        }
+      }
+
+      .button {
+        @extend %box-radius-inline-end;
+
+        padding: 0 1.5em;
+        border-inline-start: 0;
+      }
+    }
+
+    .mselect {
+      flex: 1 1 auto;
+      font-size: 1.2em;
+
+      &__label::after {
+        margin-inline-start: 0.6em;
+      }
+    }
+
+    .mselect {
+      height: $top-height;
+      white-space: nowrap;
+    }
+
+    .mselect__label {
+      height: 100%;
+    }
+
+    .list-format .button,
+    .new-study .button {
+      height: $top-height;
+      padding: 0 1em;
+
+      &::before {
+        font-size: 1.5em;
+      }
+
+      &.active {
+        background: $c-primary;
+      }
+    }
+
+    .new-study .button::before {
+      font-size: 1.66em;
+    }
+  }
+
+  .list {
+    border-top: $border;
+  }
+
+  .nostudies {
+    text-align: center;
+    margin: 40px 0 80px;
+    font-size: 2em;
+
+    p {
+      opacity: 0.6;
+    }
+
+    icon {
+      display: block;
+      font-size: 180px;
+      opacity: 0.4;
+    }
+
+    form {
+      margin-top: 20px;
+    }
+  }
+
+  #infscr-loading {
+    width: 100%;
+  }
+}

@@ -1,0 +1,17 @@
+#powerTip {
+  .forecast-info {
+    .title {
+      @extend %metal-bg;
+
+      display: block;
+      padding: 0.7em;
+      border-bottom: $border;
+      text-align: center;
+    }
+
+    .content {
+      display: block;
+      padding: 1em;
+    }
+  }
+}

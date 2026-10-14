@@ -1,0 +1,59 @@
+package lila.puzzle
+
+import lila.db.dsl.*
+import lila.mon.extensions.*
+
+// mobile app
+final class PuzzleBatch(
+    colls: PuzzleColls,
+    anonApi: PuzzleAnon,
+    pathApi: PuzzlePathApi,
+    selector: PuzzleSelector
+)(using Executor):
+
+  import BsonHandlers.given
+
+  def nextForMe(difficulty: PuzzleDifficulty, nb: Int)(using Option[Me], Perf): Fu[Vector[Puzzle]] =
+    nextForMe(PuzzleAngle.mix, PuzzleSettings(difficulty, none), nb)
+
+  def nextForMe(
+      angle: PuzzleAngle,
+      settings: PuzzleSettings,
+      nb: Int
+  )(using me: Option[Me], perf: Perf): Fu[Vector[Puzzle]] =
+    import settings.*
+    if nb < 1 then fuccess(Vector.empty)
+    else if nb == 1 then selector.nextPuzzleFor(angle, color.map(some), difficulty.some).map(_.toVector)
+    else // todo honor color for batch, maybe
+      me.foldUse(anonApi.getBatchFor(angle, difficulty, nb)): me ?=>
+        val tier =
+          if perf.nb > 5000 then PuzzleTier.good
+          else if angle.opening.isDefined then PuzzleTier.good
+          else if PuzzleDifficulty.isExtreme(difficulty) then PuzzleTier.good
+          else PuzzleTier.top
+        pathApi
+          .nextFor("batch")(angle, tier, difficulty, Set.empty)
+          .flatMapz: pathId =>
+            colls
+              .path:
+                _.aggregateList(nb): framework =>
+                  import framework.*
+                  Match(bid(pathId)) -> List(
+                    Project(bdoc("puzzleId" -> "$ids", "_id" -> false)),
+                    Unwind("puzzleId"),
+                    Sample(nb),
+                    PipelineOperator:
+                      lookup.simple(
+                        from = colls.puzzle.name,
+                        local = "puzzleId",
+                        foreign = "_id",
+                        as = "puzzle",
+                        pipe = Nil
+                      )
+                    ,
+                    PipelineOperator:
+                      bdoc("$replaceWith" -> bdoc("$arrayElemAt" -> barr("$puzzle", 0)))
+                  )
+                .map:
+                  _.view.flatMap(puzzleReader.readOpt).toVector
+              .mon(lila.mon.puzzle.selector.user.batch(nb = nb))

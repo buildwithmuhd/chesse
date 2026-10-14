@@ -1,0 +1,79 @@
+name: Build server
+
+on:
+  push:
+    paths:
+      - '.github/workflows/server.yml'
+      - 'app/**'
+      - 'conf/**'
+      - 'modules/**'
+      - 'project/**'
+      - 'translation/**'
+      - 'build.sbt'
+      - 'lila.sh'
+      - 'conf/application.conf.default'
+      - '.sbtopts.default'
+    branches-ignore:
+      - 'l10n_master'
+  pull_request:
+    paths:
+      - '.github/workflows/server.yml'
+      - 'app/**'
+      - 'conf/**'
+      - 'modules/**'
+      - 'project/**'
+      - 'translation/source/**'
+      - 'build.sbt'
+      - 'lila.sh'
+      - 'conf/application.conf.default'
+      - '.sbtopts.default'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      skip_format:
+        description: Skip the format-check job
+        type: boolean
+        default: true
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: sbt
+      - name: Setup sbt
+        uses: sbt/setup-sbt@6158cb0903b8ceeae04f830055f3155e1b6a5ad7 # v1.5.11
+      - run: TZ=UTC git log -1 --date=iso-strict-local --pretty='format:app.version.commit = "%H"%napp.version.date = "%ad"' | tee conf/version.conf
+      - run: ./lila.sh -Depoll=true "test;stage"
+      - run: cp LICENSE COPYING.md README.md target/universal/stage && git log -n 1 --pretty=oneline > target/universal/stage/commit.txt
+      - run: cd target/universal/stage && tar --zstd -cvpf ../../../lila-3.0.tar.zst . && cd -
+        env:
+          ZSTD_LEVEL: 1 # most files are already zipped
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lila-server
+          path: lila-3.0.tar.zst
+          compression-level: 0 # already compressed
+
+  format:
+    if: inputs.skip_format != true
+    runs-on: ubuntu-latest
+    env:
+      SBT_OPTS: -Dsbt.banner=false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: sbt
+      - name: Setup sbt
+        uses: sbt/setup-sbt@6158cb0903b8ceeae04f830055f3155e1b6a5ad7 # v1.5.11
+
+      - name: Check Formatting
+        run: sbt scalafmtCheckAll

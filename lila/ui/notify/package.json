@@ -1,0 +1,11 @@
+{
+  "name": "notify",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "lib": "workspace:*"
+  },
+  "build": {
+    "bundle": "src/notify.ts"
+  }
+}

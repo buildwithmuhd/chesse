@@ -1,0 +1,29 @@
+.pagination {
+  color: $c-font-dimmer;
+  display: flex;
+  padding: 0 $box-padding;
+
+  a,
+  span {
+    border-radius: $small-box-radius-size;
+    width: 2rem;
+    height: 2rem;
+    margin: 0 0.1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  span {
+    color: $c-font-dimmer;
+  }
+
+  a:hover {
+    background: color-mix(in oklab, $c-primary 10%, $c-bg);
+  }
+
+  .current {
+    background: $c-primary;
+    color: $c-over;
+  }
+}

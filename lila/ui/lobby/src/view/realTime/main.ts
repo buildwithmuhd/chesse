@@ -1,0 +1,29 @@
+import type LobbyController from '@/ctrl';
+
+import * as chart from './chart';
+import * as filterView from './filter';
+import * as list from './list';
+
+export default function (ctrl: LobbyController) {
+  let filterBody;
+  let body;
+  let nbFiltered;
+  let modeToggle;
+  let res;
+  if (ctrl.filter.open) filterBody = filterView.render(ctrl);
+  switch (ctrl.mode) {
+    case 'chart':
+      res = ctrl.filter.filter(ctrl.data.hooks);
+      nbFiltered = res.hidden;
+      body = filterBody || chart.render(ctrl, res.visible);
+      modeToggle = ctrl.filter.open ? null : chart.toggle(ctrl);
+      break;
+    default:
+      res = ctrl.filter.filter(ctrl.stepHooks);
+      nbFiltered = res.hidden;
+      body = filterBody || list.render(ctrl, res.visible);
+      modeToggle = ctrl.filter.open ? null : list.toggle(ctrl);
+  }
+  const filterToggle = filterView.toggle(ctrl, nbFiltered);
+  return [filterToggle, modeToggle, body];
+}

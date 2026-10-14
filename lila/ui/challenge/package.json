@@ -1,0 +1,11 @@
+{
+  "name": "challenge",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "lib": "workspace:*"
+  },
+  "build": {
+    "bundle": "src/challenge.ts"
+  }
+}

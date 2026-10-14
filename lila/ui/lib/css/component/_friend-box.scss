@@ -1,0 +1,103 @@
+#friend_box {
+  position: relative;
+  overflow: visible;
+  font-size: 0.9rem;
+
+  .friend_box_button {
+    height: $site-header-height;
+    line-height: $site-header-height;
+    padding: 0 0.7rem;
+
+    &::before {
+      font-size: 1.3em;
+    }
+  }
+
+  .friend_box_count {
+    white-space: nowrap;
+    padding: 0.5em 0.75em;
+  }
+
+  .content_wrap {
+    @include inline-start(calc(50% - 100px));
+    @extend %box-radius, %dropdown-shadow;
+
+    position: absolute;
+    top: $site-header-height;
+    z-index: $z-dropdown-109;
+    min-width: 200px;
+    max-height: 95vh;
+    overflow: hidden;
+    background: $c-bg-header-dropdown;
+  }
+
+  .content {
+    @include hoverflow;
+
+    max-height: 80vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-top: $border;
+
+    &:empty {
+      display: none;
+    }
+
+    div {
+      display: flex;
+      border-radius: $small-box-radius-size;
+
+      &:hover {
+        background: color-mix(in oklab, $c-secondary 10%, $c-bg-header-dropdown);
+      }
+    }
+
+    a {
+      flex: 1 1 100%;
+      padding: 4px 0.25em;
+      display: block;
+      transition: background 0.13s;
+
+      &:hover {
+        color: $c-font;
+      }
+
+      &.user-link {
+        @extend %ellipsis;
+
+        max-width: 200px;
+      }
+
+      &.tv {
+        flex: 0 0 auto;
+        padding: 0 5px;
+      }
+
+      &.friend-study {
+        flex: 0 0 auto;
+        padding: 2px 5px 0 5px;
+      }
+    }
+  }
+
+  .nobody {
+    text-align: center;
+    height: 100%;
+    padding: 3px 5px;
+
+    span {
+      display: block;
+      margin: 5px;
+    }
+  }
+
+  a.find {
+    display: none;
+    margin: 7px;
+    font-style: normal;
+  }
+
+  .nobody:hover a.find {
+    display: block;
+  }
+}

@@ -1,0 +1,14 @@
+.blindfold {
+  &.main-board piece,
+  .now-playing piece {
+    opacity: 0 !important;
+  }
+
+  &.main-board .check {
+    background-image: none;
+  }
+}
+
+#promotion-choice piece {
+  opacity: 1 !important;
+}

@@ -1,0 +1,3 @@
+#!/bin/sh
+
+exec pnpm exec lint-staged --config lint-staged.config.mjs

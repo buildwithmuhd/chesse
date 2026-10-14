@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="lichessClasses">Sinflar</string>
+  <string name="teachClassesOfChessStudents">Lichess sinflari asboblar toʻplami yordamida oʻquvchilariga shaxmatdan dars bering.</string>
+  <string name="features">Imkoniyatlar</string>
+  <string name="quicklyGenerateSafeUsernames">Oʻquvchilar uchun xavfsiz foydalanuvchi nomlari va parollarini tez yaratish</string>
+  <string name="trackStudentProgress">Oʻquvchilarning oʻyinlar va masalalardagi natijalarini kuzatib borish</string>
+  <string name="messageAllStudents">Barcha oʻquvchilarga yangi dars materiallari haqida xabar yuborish</string>
+  <string name="freeForAllForever">Hamma uchun abadiy 100% bepul, reklamasiz va kuzatuvlarsiz</string>
+  <string name="applyToBeLichessTeacher">Lichess oʻqituvchisi boʻlish uchun ariza berish</string>
+  <string name="noClassesYet">Hozircha sinflar yoʻq.</string>
+  <string name="teachersX">Oʻqituvchilar: %s</string>
+  <string name="newClass">Yangi sinf</string>
+  <string name="closeClass">Sinfni yopish</string>
+  <string name="removedByX">%s tomonidan o‘chirilgan</string>
+  <string name="reopen">Qayta ochish</string>
+  <string name="removeStudent">Oʻquvchini oʻchirish</string>
+  <string name="removedStudents">Oʻchirildi</string>
+  <string name="inviteTheStudentBack">Oʻquvchini qayta taklif qilish</string>
+  <string name="sendAMessage">Barcha oʻquvchilarga habar yuborish.</string>
+  <string name="aLinkToTheClassWillBeAdded">Xabar oxiriga sinf havolasi avtomatik ravishda qoʻshiladi, shuning uchun uni oʻzingiz yozishingizga hojat yoʻq.</string>
+  <string name="className">Sinf nomi</string>
+  <string name="classDescription">Sinf haqida</string>
+  <string name="visibleByBothStudentsAndTeachers">Sinfning barcha oʻqituvchilariga va oʻquvchilariga koʻrinadi</string>
+  <string name="teachersOfTheClass">Sinf oʻqituvchilari</string>
+  <string name="addLichessUsernames">Murabbiy sifatida taklif qilish uchun Lichess foydalanuvchi nomlarini kiriting. Har bir qatorda bittadan nom yozing.</string>
+  <string name="resetPassword">Parolni tiklash</string>
+  <string name="makeSureToCopy">Parolni hoziroq nusxalab oling yoki yozib qoʻying. Uni qayta hech qachon koʻra olmaysiz!</string>
+  <string name="passwordX">Parol: %s</string>
+  <string name="generateANewPassword">Oʻquvchiga yangi parol yaratish</string>
+  <string name="invitedToXByY">%2$s tomonidan %1$sʼga taklif qilindi</string>
+  <string name="realName">Haqiqiy ismingiz</string>
+  <string name="privateWillNeverBeShown">Maxfiy. Sinfdan tashqarida hech qachon koʻrsatilmaydi. Oʻquvchi kimligini eslab qolishingizga yordam beradi.</string>
+  <string name="addStudent">Oʻquvchi qoʻshish</string>
+  <string name="lichessProfileXCreatedForY">%2$s uchun %1$s Lichess profili yaratildi.</string>
+  <string name="studentCredentials">Oʻquvchi:  %1$s
+Foydalanuvchi nomi: %2$s
+Paroli: %3$s</string>
+  <string name="inviteALichessAccount">Lichess akkauntini taklif qilish</string>
+  <string name="inviteDesc1">Agar oʻquvchi Lichess akkauntiga ega boʻlsa uni sinfga taklif qilishingiz mumkin.</string>
+  <string name="inviteDesc2">Ular sinfga qoʻshilish haqidagi taklif xabarini olishadi.</string>
+  <string name="inviteDesc3">Muhim: faqat oʻzingiz taniydigan va haqiqatan ham sinfga aʻzo boʻlish istagi boʻlgan oʻquvchilarni taklif qiling.</string>
+  <string name="inviteDesc4">Hech qachon notanish oʻyinchilarga taklif yubormang.</string>
+  <string name="createANewLichessAccount">Yangi Lichess akkauntini yaratish</string>
+  <string name="createDesc1">Agar oʻquvchining hali Lichess akkaunti boʻlmasa, bu yerda u uchun yangi akkaunt yaratishingiz mumkin.</string>
+  <string name="createDesc2">Elektron pochta manzili talab qilinmaydi. Parol avtomatik ravishda yaratiladi va oʻquvchi tizimga kirishi uchun parolni unga yetkazishingiz kerak boʻladi.</string>
+  <string name="createDesc3">Muhim: bitta oʻquvchida bir nechta akkaunt boʻlishi mumkin emas.</string>
+  <string name="createDesc4">Agar unda akkaunt allaqachon mavjud boʻlsa, taklif qilish formasidan foydalaning.</string>
+  <string name="createStudentWarning">Faqat haqiqiy oʻquvchilar uchun akkaunt yarating. Oʻzingiz uchun bir nechta akkaunt ochish maqsadida bu imkoniyatdan foydalanmang. Aks holda, bloklanishingiz mumkin.</string>
+  <string name="lichessUsername">Lichess foydalanuvchi nomi</string>
+  <string name="generateANewUsername">Yangi foydalanuvchi nomini yaratish</string>
+  <string name="welcomeToClass">%s sinfiga xush kelibsiz!
+Sinfga kirish uchun havola quyidagicha.</string>
+  <string name="invitationToClass">Siz \"%s\" sinfiga oʻquvchi sifatida taklif qilindingiz.</string>
+  <string name="clickToViewInvitation">Taklifni koʻrish uchun havolani bosing:</string>
+  <plurals name="nbPendingInvitations">
+    <item quantity="one">Bitta kutilayotgan taklifnoma</item>
+    <item quantity="other">%s ta kutilayotgan taklifnoma</item>
+  </plurals>
+  <string name="pending">Kutilmoqda</string>
+  <string name="declined">Rad etildi</string>
+  <string name="onlyVisibleToTeachers">Faqat sinf oʻqituvchilariga koʻrinadi</string>
+  <string name="lastActiveDate">Faol</string>
+  <string name="managed">Oʻqituvchi tomonidan yaratilgan</string>
+  <string name="thisStudentAccountIsManaged">Ushbu oʻquvchi akkaunti oʻqituvchi tomonidan boshqarilmoqda</string>
+  <string name="upgradeFromManaged">Boshqariladigan holatdan mustaqil holatga oʻtkazish</string>
+  <string name="release">Bitirtirish</string>
+  <string name="releaseTheAccount">Oʻquvchi oʻz akkauntini mustaqil boshqarishi uchun uni bitirtiring.</string>
+  <string name="releaseDesc1">Bitirgan akkauntni qayta boshqarib boʻlmaydi. Oʻquvchi bola rejimini oʻzi yoqib‑oʻchirishi va parolini mustaqil oʻrnatishi mumkin boʻladi.</string>
+  <string name="releaseDesc2">Oʻquvchi akkaunti bitirgandan soʻng ham sinfda qoladi.</string>
+  <string name="realUniqueEmail">Oʻquvchining haqiqiy va takrorlanmas e‑pochta manzili. Biz ushbu manzilga akkauntni bitirtirish havolasi koʻrsatilgan tasdiqlash xatini yuboramiz.</string>
+  <string name="closeStudent">Akkauntni yopish</string>
+  <string name="closeTheAccount">Oʻquvchi akkauntini butunlay yopish.</string>
+  <string name="closeDesc1">Oʻquvchi bu akkauntdan boshqa hech qachon foydalana olmaydi. Akkauntni yopish — qaytarib boʻlmas jarayon. Oʻquvchi buni tushunganiga va bunga rozi ekanligiga ishonch hosil qiling.</string>
+  <string name="closeDesc2">Oʻquvchi akkauntdan foydalanishda davom etishi uchun, yaxshisi, akkaunt nazoratini uning oʻziga topshirganingiz maʼqul.</string>
+  <string name="teachers">Oʻqituvchilar</string>
+  <plurals name="nbTeachers">
+    <item quantity="one">Oʻqituvchi</item>
+    <item quantity="other">%s ta oʻqituvchi</item>
+  </plurals>
+  <plurals name="nbStudents">
+    <item quantity="one">Oʻquvchi</item>
+    <item quantity="other">%s ta oʻquvchi</item>
+  </plurals>
+  <string name="students">Oʻquvchilar</string>
+  <string name="progress">Progress</string>
+  <string name="noStudents">Hali sinfda oʻquvchilar yoʻq.</string>
+  <string name="noRemovedStudents">Oʻchirilgan oʻquvchilar yoʻq</string>
+  <string name="overDays">Muddat</string>
+  <string name="timePlaying">Oʻyin vaqti</string>
+  <string name="variantXOverLastY">Oxirgi %2$s kunda %1$s</string>
+  <string name="winrate">Gʻalabalar foizi</string>
+  <string name="na">—</string>
+  <string name="overview">Obzor</string>
+  <string name="news">Yangiliklar</string>
+  <string name="classNews">Sinf yangiliklari</string>
+  <string name="editNews">Yangiliklarni tahrirlash</string>
+  <string name="notifyAllStudents">Barcha oʻquvchilarni xabardor qilish</string>
+  <string name="nothingHere">Hali hech nima yoʻq.</string>
+  <string name="newsEdit1">Barcha sinf yangiliklari bitta maydonda.</string>
+  <string name="newsEdit2">Yangi habarlarni tepaga qoʻshing. Avvalgi yangiliklarni oʻchirmang.</string>
+  <string name="newsEdit3">Yangiliklarni --- 
+bilan ajrating, u gorizontal chiziqni tasvirlaydi.</string>
+  <string name="invite">Taklif etish</string>
+  <string name="youHaveBeenInvitedByX">Siz %s tomonidan taklif etildingiz.</string>
+  <string name="youAcceptedThisInvitation">Siz ushbu taklifni qabul qilgansiz.</string>
+  <string name="youDeclinedThisInvitation">Siz ushbu taklifni rad etgansiz.</string>
+  <string name="orSeparator" comment="Used as separator between invite sections. Shown as large '~ or ~'.">yoki</string>
+  <string name="createMultipleAccounts">Bir vaqtni oʻzida bir nechta Lichess akkauntlarini yaratish</string>
+  <string name="multipleAccsFormDescription" comment="%s is a link and will be replaced with the translation of useThisForm. Make sure both strings fit together.">Shuningdek, %s orqali oʻquvchilar ismlari roʻyxatidan foydalanib, bir nechta Lichess akkauntlarini yaratishingiz mumkin.</string>
+  <string name="useThisForm" comment="Link text in multipleAccsFromDescription">ushbu forma</string>
+  <string name="maxStudentsNote" comment="%1$s will be replaced with a large number (currently 100).\n%2$s is a link and will be replaced with the translation of createMoreClasses. Make sure both strings fit together.">E‘tibor bering, sinfda koʻpi bilan %1$s tagacha oʻquvchi boʻlishi mumkin. Koʻproq oʻquvchini boshqarish uchun %2$s.</string>
+  <string name="createMoreClasses" comment="Link text in maxStudentsNote">qoʻshimcha sinflar yarating</string>
+  <string name="studentsRealNamesOnePerLine">Oʻquvchilarning haqiqiy ismlari, har bir qatorda bittadan</string>
+  <string name="xisNowAStudentOfTheClass">%s endi sinf oʻquvchisi</string>
+  <string name="anInvitationHasBeenSentToX">%sʼga taklifnoma yuborildi</string>
+  <string name="xAlreadyHasAPendingInvitation">%s uchun kutilayotgan taklifnoma allaqachon mavjud</string>
+  <string name="xIsAKidAccountWarning">%1$s bola akkaunti, shu sababli sizning u xabaringizni qabul qila olmaydi. Taklifnoma havolasini oʻzingiz qoʻlingiz bilan yetkazishingiz kerak: %2$s</string>
+  <string name="moveToClass">%sʼga oʻtish</string>
+  <string name="moveToAnotherClass">Boshqa sinfga koʻchirish</string>
+  <string name="allowMessagingBetweenStudents">Oʻquvchilar oʻzaro xabar almashishiga ruxsat berish</string>
+  <string name="allowMessagingBetweenStudentsDesc">Bu faqat siz oʻquvchilaringiz uchun yaratgan akkauntlarga tegishli.</string>
+  <string name="quickLoginCode">Tez kirish kodi</string>
+  <string name="quickLoginCodes">Tez kirish kodlari</string>
+  <string name="quickLoginCodesDesc1" comment="String is a URL">Oʻquvchilaringizni Lichessʼga kiritish uchun %s sahifasida ushbu kodlardan foydalaning.</string>
+  <string name="quickLoginCodesDesc2">Kodlarning amal qilish muddati tugasa ham, oʻquvchilar tizimdan oʻzlari chiqib ketmagunlaricha tizimda qoladilar.</string>
+  <string name="expirationInMomentFromNow" comment="String is the translation of, for example, 'in 2 hours'">%s muddati tugaydi</string>
+</resources>

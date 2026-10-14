@@ -1,0 +1,83 @@
+.forum-topic {
+  h1 {
+    display: flex;
+    unicode-bidi: plaintext;
+  }
+
+  &:not(.topic-form) {
+    padding-inline: 0;
+
+    .box__top,
+    .form3 {
+      padding-inline: $box-padding;
+    }
+  }
+
+  &.topic-form {
+    .warning {
+      @extend %box-radius;
+
+      padding: 1rem;
+      background: color-mix(in oklab, $c-bad 12%, $c-bg);
+      border: 1px solid color-mix(in oklab, $c-error 65%, $c-bg);
+      text-align: center;
+      font-size: 1.3em;
+      margin-bottom: 2rem;
+
+      h2 {
+        font-weight: bold;
+        color: $c-error;
+      }
+
+      h2,
+      p {
+        margin: 1.5rem;
+      }
+    }
+  }
+
+  &__posts {
+    margin: 1rem 0;
+  }
+
+  &__actions {
+    @extend %flex-between;
+
+    margin-top: 1.5rem;
+    margin-bottom: 2rem;
+    padding-inline: $box-padding;
+
+    p {
+      margin-bottom: 0;
+    }
+
+    div {
+      @extend %flex-wrap;
+
+      gap: 0.5em;
+
+      .unsub.on .off,
+      .unsub.off .on {
+        display: none;
+      }
+    }
+  }
+
+  .form3 .form-actions {
+    border-color: $c-bg-zebra2;
+
+    @include if-transp-light {
+      border-color: $c-dimmer;
+    }
+  }
+
+  .reply label[for='form3-text'] {
+    display: none;
+  }
+
+  small .space-between {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+  }
+}

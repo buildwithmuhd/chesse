@@ -1,0 +1,41 @@
+.tour__stats {
+  @extend %flex-column, %box-neat;
+
+  gap: 2em;
+  background: $c-bg-box;
+  padding: 1.7em 0;
+  align-self: flex-start;
+
+  h2 {
+    font-size: 1.5em;
+    text-align: center;
+  }
+
+  table {
+    margin: auto;
+  }
+
+  td {
+    font-weight: bold;
+    padding-inline-start: 1em;
+    text-align: right;
+    line-height: 2em;
+  }
+
+  &__downloads {
+    margin: 0 2em;
+
+    .toggle-box {
+      padding: 0 2em 1em 2em;
+
+      legend {
+        margin: auto;
+      }
+    }
+
+    a {
+      display: block;
+      margin: 1em 0;
+    }
+  }
+}

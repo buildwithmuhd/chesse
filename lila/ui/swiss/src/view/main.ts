@@ -1,0 +1,237 @@
+import { COLORS } from 'chessops';
+import flatpickr from 'flatpickr';
+
+import standaloneChat from 'lib/chat/standalone';
+import { use24h } from 'lib/i18n';
+import { licon } from 'lib/licon';
+import { once } from 'lib/storage';
+import {
+  spinnerVdom,
+  initMiniGames,
+  prompt,
+  type VNode,
+  dataIcon,
+  bind,
+  onInsert,
+  type LooseVNodes,
+  hl,
+  type MaybeVNodes,
+  a,
+} from 'lib/view';
+import { renderPager, searchButton, searchInput } from 'lib/view/pagination';
+import { numberRow, toggleBox } from 'lib/view/util';
+import { watchers } from 'lib/view/watchers';
+
+import type SwissCtrl from '../ctrl';
+import type { SwissData } from '../interfaces';
+import * as boards from './boards';
+import header from './header';
+import playerInfo from './playerInfo';
+import podium from './podium';
+import standing from './standing';
+
+export default function (ctrl: SwissCtrl) {
+  const d = ctrl.data;
+  const content =
+    d.status === 'created' ? created(ctrl) : d.status === 'started' ? started(ctrl) : finished(ctrl);
+  return hl('main.' + ctrl.opts.classes, { hook: { postpatch: () => initMiniGames() } }, [
+    hl('aside.swiss__side', {
+      hook: onInsert(el => {
+        $(el).replaceWith(ctrl.opts.$side);
+        ctrl.opts.chat && standaloneChat(ctrl.opts.chat);
+      }),
+    }),
+    hl('div.swiss__underchat', {
+      hook: onInsert(el => $(el).replaceWith($('.swiss__underchat.none').removeClass('none'))),
+    }),
+    playerInfo(ctrl) || stats(ctrl) || boards.top(d.boards, ctrl.opts),
+    hl('div.swiss__main', [hl('div.box.swiss__main-' + d.status, content), boards.many(d.boards, ctrl.opts)]),
+    ctrl.opts.chat && hl('div.chat__members.none', { hook: onInsert(watchers) }),
+  ]);
+}
+
+function created(ctrl: SwissCtrl): LooseVNodes {
+  return [
+    header(ctrl),
+    nextRound(ctrl),
+    controls(ctrl),
+    standing(ctrl, 'created'),
+    ctrl.data.quote &&
+      hl('blockquote.pull-quote', [hl('p', ctrl.data.quote.text), hl('footer', ctrl.data.quote.author)]),
+  ];
+}
+
+const notice = (ctrl: SwissCtrl) => {
+  const d = ctrl.data;
+  return (
+    d.me &&
+    !d.me.absent &&
+    d.status === 'started' &&
+    d.nextRound &&
+    hl('div.swiss__notice.bar-glider', i18n.site.standByX(d.me.name))
+  );
+};
+
+function started(ctrl: SwissCtrl): LooseVNodes {
+  return [
+    header(ctrl),
+    joinTheGame(ctrl) || notice(ctrl),
+    nextRound(ctrl),
+    controls(ctrl),
+    standing(ctrl, 'started'),
+  ];
+}
+
+function finished(ctrl: SwissCtrl): LooseVNodes {
+  return [
+    hl('div.podium-wrap', [confetti(ctrl.data), header(ctrl), podium(ctrl)]),
+    controls(ctrl),
+    standing(ctrl, 'finished'),
+  ];
+}
+
+function controls(ctrl: SwissCtrl): VNode {
+  return hl('div.swiss__controls', [
+    hl('div.pager', renderPager(ctrl, searchButton(ctrl), searchInput(ctrl, { swiss: ctrl.data.id }))),
+    joinButton(ctrl),
+  ]);
+}
+
+function nextRound(ctrl: SwissCtrl): VNode | undefined {
+  if (!ctrl.opts.schedule || ctrl.data.nbOngoing || ctrl.data.round === 0) return undefined;
+  return hl(
+    'form.schedule-next-round',
+    {
+      class: { required: !ctrl.data.nextRound },
+      attrs: { action: `/api/swiss/${ctrl.data.id}/schedule-next-round`, method: 'post' },
+    },
+    [
+      hl('input', {
+        attrs: { name: 'date', placeholder: 'Schedule the next round', value: ctrl.data.nextRound?.at || '' },
+        hook: onInsert((el: HTMLInputElement) =>
+          flatpickr(el, {
+            minDate: 'today',
+            maxDate: new Date(Date.now() + 1000 * 3600 * 24 * 31),
+            dateFormat: 'Z',
+            altInput: true,
+            altFormat: 'Y-m-d h:i K',
+            enableTime: true,
+            monthSelectorType: 'static',
+            onClose() {
+              (el.parentNode as HTMLFormElement).submit();
+            },
+            time_24hr: use24h(),
+          }),
+        ),
+      }),
+    ],
+  );
+}
+
+function joinButton(ctrl: SwissCtrl): VNode | undefined {
+  const d = ctrl.data;
+  if (!ctrl.opts.userId)
+    return hl(
+      'a.fbt.text.highlight',
+      { attrs: { href: '/login?referrer=' + window.location.pathname, 'data-icon': licon.PlayTriangle } },
+      i18n.site.signIn,
+    );
+
+  if (d.joinTeam)
+    return hl(
+      'a.fbt.text.highlight',
+      { attrs: { href: `/team/${d.joinTeam}`, 'data-icon': licon.Group } },
+      i18n.team.joinTeam,
+    );
+
+  if (!d.canJoin && (d.me?.absent || !d.me)) return undefined;
+
+  if (ctrl.joinSpinner) return spinnerVdom();
+
+  const promptEntryCodeOrJoin = async () => {
+    if (d.password) {
+      const p = await prompt(i18n.site.tournamentEntryCode);
+      if (p !== null) ctrl.join(p);
+    } else ctrl.join();
+  };
+
+  if (d.me && d.status !== 'finished')
+    return d.me.absent
+      ? hl(
+          'button.fbt.text.highlight',
+          { attrs: dataIcon(licon.PlayTriangle), hook: bind('click', promptEntryCodeOrJoin, ctrl.redraw) },
+          i18n.site.join,
+        )
+      : hl(
+          'button.fbt.text',
+          { attrs: dataIcon(licon.FlagOutline), hook: bind('click', ctrl.withdraw, ctrl.redraw) },
+          i18n.site.withdraw,
+        );
+
+  return hl(
+    'button.fbt.text.highlight',
+    {
+      attrs: dataIcon(licon.PlayTriangle),
+      hook: bind('click', promptEntryCodeOrJoin, ctrl.redraw),
+    },
+    i18n.site.join,
+  );
+}
+
+function joinTheGame(ctrl: SwissCtrl) {
+  const gameId = ctrl.data.me?.gameId;
+  return (
+    gameId &&
+    hl('a.swiss__ur-playing.button.is.is-after', { attrs: { href: '/' + gameId } }, [
+      i18n.site.youArePlaying,
+      hl('br'),
+      i18n.site.joinTheGame,
+    ])
+  );
+}
+
+function confetti(data: SwissData) {
+  return (
+    data.me &&
+    data.isRecentlyFinished &&
+    once('tournament.end.canvas.' + data.id) &&
+    hl('canvas#confetti', {
+      hook: onInsert(() => site.asset.loadEsm('bits.confetti')),
+    })
+  );
+}
+
+const downloadLink = (href: string, text: MaybeVNodes) =>
+  a(href)('.text', { 'data-icon': licon.Download, download: true }, text);
+
+function stats(ctrl: SwissCtrl) {
+  const s = ctrl.data.stats;
+  const slots = ctrl.data.round * ctrl.data.nbPlayers;
+  if (!s) return undefined;
+  return hl('div.swiss__stats', [
+    hl('h2', i18n.site.tournamentComplete),
+    hl('table', [
+      ctrl.opts.showRatings ? numberRow(i18n.site.averageElo, s.averageRating, 'raw') : null,
+      numberRow(i18n.site.gamesPlayed, s.games),
+      ...COLORS.map(c => numberRow(i18n.site[`${c}Wins`], [s[`${c}Wins`], slots], 'percent')),
+      numberRow(i18n.site.drawRate, [s.draws, slots], 'percent'),
+      numberRow(i18n.swiss.byes, [s.byes, slots], 'percent'),
+      numberRow(i18n.swiss.absences, [s.absences, slots], 'percent'),
+    ]),
+    hl('div.swiss__stats__links', [
+      hl(
+        'a',
+        { attrs: { href: `/swiss/${ctrl.data.id}/round/1` } },
+        i18n.swiss.viewAllXRounds(ctrl.data.round),
+      ),
+    ]),
+    hl('div.swiss__stats__downloads', [
+      toggleBox(i18n.site.download, [
+        downloadLink(`/swiss/${ctrl.data.id}.trf`, [i18n.site.downloadResults, ' (TRF)']),
+        downloadLink(`/api/swiss/${ctrl.data.id}/games`, [i18n.site.downloadAllGames, ' (PGN)']),
+        downloadLink(`/api/swiss/${ctrl.data.id}/results`, [i18n.site.downloadResults, ' (NDJSON)']),
+        downloadLink(`/api/swiss/${ctrl.data.id}/results?as=csv`, [i18n.site.downloadResults, ' (CSV)']),
+      ]),
+    ]),
+  ]);
+}

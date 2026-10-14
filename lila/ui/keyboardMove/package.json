@@ -1,0 +1,14 @@
+{
+  "name": "keyboard-move",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "lib": "workspace:*"
+  },
+  "build": {
+    "bundle": "src/keyboardMove.ts"
+  },
+  "exports": {
+    ".": "./src/exports.ts"
+  }
+}
